@@ -34,6 +34,7 @@
             </div>
             
             <template id="balloon-template">
+                {% verbatim %}
                 {{#telemetry}}
                 <div class="bg-white rounded-xl shadow-lg border border-slate-200 p-6 flex flex-col transition-all hover:shadow-xl">
                     <div class="flex justify-between items-start mb-6">
@@ -77,6 +78,7 @@
                     </div>
                 </div>
                 {{/telemetry}}
+                {% endverbatim %}
             </template>
         </div>
     </div>
