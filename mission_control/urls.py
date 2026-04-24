@@ -16,8 +16,13 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from telemetry import views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("", views.dashboard_view, name="dashboard"),
+    path("api/telemetry/", views.latest_telemetry, name="api_telemetry"),
+    path("api/image/receive/", views.receive_image_metadata, name="receive_image_metadata"),
+    path("", include("telemetry.urls")),
 ]

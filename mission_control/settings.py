@@ -11,19 +11,28 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+env = environ.Env(
+    # set casting, default value
+    DEBUG=(bool, False)
+)
+
+# Take environment variables from .env file
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-wl+04k9^o919wvgz0shg2sf99++)+_#zt_p)v5bi44yjvhft_y"
+SECRET_KEY = env('SECRET_KEY', default="django-insecure-wl+04k9^o919wvgz0shg2sf99++)+_#zt_p)v5bi44yjvhft_y")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False 
+DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = ['mission-control.247-data.com', '63.33.141.98', 'localhost']
 
@@ -36,6 +45,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "dashboard",
+    "telemetry",
 ]
 
 MIDDLEWARE = [
@@ -53,7 +64,7 @@ ROOT_URLCONF = "mission_control.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
