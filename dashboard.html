@@ -20,6 +20,25 @@
             <p class="text-slate-500 mt-2 text-lg">High-Altitude Balloon Telemetry Dashboard</p>
         </header>
 
+        <!-- Balloon Fleet List -->
+        <div class="mb-10">
+            <h2 class="text-2xl font-bold text-slate-800 mb-4">Balloon Fleet</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {% for balloon in balloons %}
+                <div class="bg-white rounded-xl shadow border border-slate-200 p-6 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-slate-800">{{ balloon.name }}</h3>
+                    <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-white {% if balloon.status == 'IN_FLIGHT' %}bg-emerald-500{% else %}bg-slate-400{% endif %}">
+                        {% if balloon.status == 'IN_FLIGHT' %}Active{% else %}Inactive{% endif %}
+                    </span>
+                </div>
+                {% empty %}
+                <div class="col-span-full text-center text-slate-500 py-8 bg-white rounded-xl shadow-sm border border-slate-200 border-dashed">
+                    No balloons launched yet.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
         <!-- Container polling the JSON endpoint via HTMX and rendering via Mustache -->
         <div hx-ext="client-side-templates">
             <div hx-get="/api/telemetry/" 

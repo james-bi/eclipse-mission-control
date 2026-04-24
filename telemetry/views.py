@@ -6,7 +6,8 @@ import json
 from .models import Balloon, BalloonImage
 
 def dashboard_view(request):
-    return render(request, 'dashboard.html')
+    balloons = Balloon.objects.all()
+    return render(request, 'dashboard.html', {'balloons': balloons})
 
 @csrf_exempt
 @require_POST
