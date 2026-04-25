@@ -144,8 +144,14 @@ def balloon_detail(request, balloon_id):
     # Get latest telemetry
     latest_telemetry = balloon.telemetry.order_by('-timestamp').first()
     
+    # Limit telemetry data to last 500 points to prevent memory overload
     # Get all telemetry for charts
-    telemetry_data = list(balloon.telemetry.order_by('timestamp').values('timestamp', 'altitude', 'latitude', 'longitude'))
+    max_points = 500
+    total_telemetry = balloon.telemetry.count()
+    skip_points = max(0, total_telemetry - max_points)
+    
+    telemetry_qs = balloon.telemetry.order_by('timestamp').values('timestamp', 'altitude', 'latitude', 'longitude', 'temperature')
+    telemetry_data = list(telemetry_qs[skip_points:])
     
     # Calculate ascent rate (m/s) from last two points
     ascent_rate = 0

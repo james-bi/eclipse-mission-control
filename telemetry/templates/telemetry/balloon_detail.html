@@ -107,6 +107,8 @@
     <script>
         let map;
         let flightPath;
+        let altitudeChart;
+        let temperatureChart;
 
         function getTelemetryData() {
             const telemetryElement = document.getElementById('telemetry-data');
@@ -163,16 +165,44 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const telemetryData = getTelemetryData();
-            const ctxAltitude = document.getElementById('altitudeChart').getContext('2d');
-            const ctxTemp = document.getElementById('temperatureChart').getContext('2d');
-            
-            const labels = telemetryData.map(point => new Date(point.timestamp).toLocaleTimeString());
-            const altitudes = telemetryData.map(point => point.altitude);
-            const temperatures = telemetryData.map(point => point.temperature);
+        function destroyCharts() {
+            if (altitudeChart) {
+                altitudeChart.destroy();
+                altitudeChart = null;
+            }
+            if (temperatureChart) {
+                temperatureChart.destroy();
+                temperatureChart = null;
+            }
+        }
 
-            new Chart(ctxAltitude, {
+        function initCharts() {
+            destroyCharts();
+
+            const telemetryData = getTelemetryData();
+            const ctxAltitude = document.getElementById('altitudeChart');
+            const ctxTemp = document.getElementById('temperatureChart');
+            
+            if (!ctxAltitude || !ctxTemp) {
+                return;
+            }
+
+            // Limit labels and data to prevent rendering issues
+            const maxChartPoints = 200;
+            let startIdx = 0;
+            if (telemetryData.length > maxChartPoints) {
+                startIdx = telemetryData.length - maxChartPoints;
+            }
+
+            const displayData = telemetryData.slice(startIdx);
+            const labels = displayData.map(point => new Date(point.timestamp).toLocaleTimeString());
+            const altitudes = displayData.map(point => point.altitude);
+            const temperatures = displayData.map(point => point.temperature);
+
+            const altitudeCtx = ctxAltitude.getContext('2d');
+            const tempCtx = ctxTemp.getContext('2d');
+
+            altitudeChart = new Chart(altitudeCtx, {
                 type: 'line',
                 data: {
                     labels: labels,
@@ -180,22 +210,46 @@
                         label: 'Altitude (m)',
                         data: altitudes,
                         borderColor: 'rgb(59, 130, 246)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        tension: 0.1
+                        backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        tension: 0.2,
+                        fill: true
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        decimation: {
+                            enabled: true,
+                            algorithm: 'lttb',
+                            samples: 100
+                        }
+                    },
                     scales: {
                         y: {
-                            beginAtZero: true
+                            beginAtZero: true,
+                            grid: {
+                                drawBorder: false,
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
                         }
                     }
                 }
             });
 
-            new Chart(ctxTemp, {
+            temperatureChart = new Chart(tempCtx, {
                 type: 'line',
                 data: {
                     labels: labels,
@@ -203,19 +257,63 @@
                         label: 'Temperature (°C)',
                         data: temperatures,
                         borderColor: 'rgb(239, 68, 68)',
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                        tension: 0.1
+                        backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        tension: 0.2,
+                        fill: true
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        decimation: {
+                            enabled: true,
+                            algorithm: 'lttb',
+                            samples: 100
+                        }
+                    },
                     scales: {
                         y: {
-                            beginAtZero: false
+                            beginAtZero: false,
+                            grid: {
+                                drawBorder: false,
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
                         }
                     }
                 }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initCharts();
+            
+            // Handle page visibility to pause/resume updates
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    // Page is hidden - destroy charts to free memory
+                    destroyCharts();
+                } else {
+                    // Page is visible again - reinitialize charts
+                    initCharts();
+                }
+            });
+
+            // Clean up charts when leaving the page
+            window.addEventListener('unload', function() {
+                destroyCharts();
             });
         });
     </script>
