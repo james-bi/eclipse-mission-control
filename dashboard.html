@@ -27,8 +27,8 @@
                 {% for balloon in balloons %}
                 <div class="bg-white rounded-xl shadow border border-slate-200 p-6 flex justify-between items-center">
                     <h3 class="text-lg font-bold text-slate-800">{{ balloon.name }}</h3>
-                    <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-white {% if balloon.status == 'IN_FLIGHT' %}bg-emerald-500{% else %}bg-slate-400{% endif %}">
-                        {% if balloon.status == 'IN_FLIGHT' %}Active{% else %}Inactive{% endif %}
+                    <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-white {% if balloon.status in 'IN_FLIGHT,active' %}bg-emerald-500{% else %}bg-slate-400{% endif %}">
+                        {% if balloon.status in 'IN_FLIGHT,active' %}Active{% else %}Inactive{% endif %}
                     </span>
                 </div>
                 {% empty %}

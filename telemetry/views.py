@@ -42,9 +42,9 @@ def latest_telemetry(request):
     data = []
     
     for balloon in balloons:
-        latest = balloon.telemetry_data.order_by('-timestamp').first()
+        latest = balloon.telemetry.order_by('-timestamp').first()
         
-        display_status = 'Active' if balloon.status == 'IN_FLIGHT' else 'Lost'
+        display_status = 'Active' if balloon.status in ['IN_FLIGHT', 'active'] else 'Lost'
         is_active = (display_status == 'Active')
         
         if latest:
