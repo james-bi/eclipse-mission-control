@@ -12,6 +12,39 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Google Maps API -->
     <script async defer src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap"></script>
+    <style>
+        /* Prevent chart containers from expanding infinitely */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 320px;
+            max-height: 320px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        
+        .chart-container canvas {
+            display: block;
+            max-height: 320px;
+        }
+        
+        /* Ensure map has consistent sizing */
+        #map {
+            width: 100% !important;
+            height: 384px !important;
+        }
+        
+        /* Prevent body overflow */
+        body {
+            overflow-x: hidden;
+        }
+        
+        /* Ensure main container doesn't stretch */
+        .max-w-7xl {
+            width: 100%;
+            max-width: 80rem;
+        }
+    </style>
 </head>
 <body class="bg-slate-100 min-h-screen font-sans">
     <!-- Header -->
@@ -72,13 +105,17 @@
                 <!-- Altitude Chart -->
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                     <h3 class="text-lg font-semibold text-slate-800 mb-4">Altitude Over Time</h3>
-                    <canvas id="altitudeChart" class="w-full h-80"></canvas>
+                    <div class="chart-container">
+                        <canvas id="altitudeChart"></canvas>
+                    </div>
                 </div>
 
                 <!-- Temperature Chart -->
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                     <h3 class="text-lg font-semibold text-slate-800 mb-4">Temperature Over Time</h3>
-                    <canvas id="temperatureChart" class="w-full h-80"></canvas>
+                    <div class="chart-container">
+                        <canvas id="temperatureChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -124,11 +161,28 @@
         }
 
         function initMap() {
-            const telemetryData = getTelemetryData();
-            const latest = telemetryData[telemetryData.length - 1];
-            const center = latest ? { lat: parseFloat(latest.latitude), lng: parseFloat(latest.longitude) } : { lat: 40.7128, lng: -74.0060 };
+            const mapElement = document.getElementById('map');
+            if (!mapElement) {
+                console.warn('Map container not found');
+                return;
+            }
 
-            map = new google.maps.Map(document.getElementById('map'), {
+            const telemetryData = getTelemetryData();
+            if (telemetryData.length === 0) {
+                console.warn('No telemetry data for map');
+                return;
+            }
+
+            const latest = telemetryData[telemetryData.length - 1];
+            const center = latest ? { 
+                lat: parseFloat(latest.latitude), 
+                lng: parseFloat(latest.longitude) 
+            } : { 
+                lat: 40.7128, 
+                lng: -74.0060 
+            };
+
+            map = new google.maps.Map(mapElement, {
                 zoom: 10,
                 center: center,
                 mapTypeId: 'terrain',
@@ -141,6 +195,14 @@
                 gestureHandling: 'cooperative'
             });
 
+            // Trigger resize to ensure map renders correctly
+            setTimeout(function() {
+                google.maps.event.trigger(map, 'resize');
+                if (latest) {
+                    map.setCenter(center);
+                }
+            }, 100);
+
             const pathCoordinates = telemetryData.map(point => ({
                 lat: parseFloat(point.latitude),
                 lng: parseFloat(point.longitude)
@@ -149,18 +211,18 @@
             flightPath = new google.maps.Polyline({
                 path: pathCoordinates,
                 geodesic: true,
-                strokeColor: '#FF0000',
-                strokeOpacity: 1.0,
-                strokeWeight: 2
+                strokeColor: '#3B82F6',
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                map: map
             });
-
-            flightPath.setMap(map);
 
             if (latest) {
                 new google.maps.Marker({
                     position: center,
                     map: map,
-                    title: 'Current Position'
+                    title: 'Current Position',
+                    icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
                 });
             }
         }
@@ -202,6 +264,35 @@
             const altitudeCtx = ctxAltitude.getContext('2d');
             const tempCtx = ctxTemp.getContext('2d');
 
+            // Common chart options for consistency
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            padding: 15,
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    filler: {
+                        propagate: true
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                animation: {
+                    duration: 300
+                }
+            };
+
             altitudeChart = new Chart(altitudeCtx, {
                 type: 'line',
                 data: {
@@ -210,37 +301,41 @@
                         label: 'Altitude (m)',
                         data: altitudes,
                         borderColor: 'rgb(59, 130, 246)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.08)',
                         borderWidth: 2,
                         pointRadius: 0,
-                        pointHoverRadius: 4,
-                        tension: 0.2,
-                        fill: true
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: 'rgb(59, 130, 246)',
+                        tension: 0.3,
+                        fill: true,
+                        clip: 20
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    },
-                    plugins: {
-                        decimation: {
-                            enabled: true,
-                            algorithm: 'lttb',
-                            samples: 100
-                        }
-                    },
+                    ...commonOptions,
                     scales: {
                         y: {
                             beginAtZero: true,
+                            ticks: {
+                                padding: 10,
+                                font: {
+                                    size: 11
+                                }
+                            },
                             grid: {
                                 drawBorder: false,
                                 color: 'rgba(0, 0, 0, 0.05)'
                             }
                         },
                         x: {
+                            ticks: {
+                                padding: 10,
+                                font: {
+                                    size: 11
+                                },
+                                maxRotation: 45,
+                                minRotation: 0
+                            },
                             grid: {
                                 display: false
                             }
@@ -257,37 +352,41 @@
                         label: 'Temperature (°C)',
                         data: temperatures,
                         borderColor: 'rgb(239, 68, 68)',
-                        backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.08)',
                         borderWidth: 2,
                         pointRadius: 0,
-                        pointHoverRadius: 4,
-                        tension: 0.2,
-                        fill: true
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: 'rgb(239, 68, 68)',
+                        tension: 0.3,
+                        fill: true,
+                        clip: 20
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    },
-                    plugins: {
-                        decimation: {
-                            enabled: true,
-                            algorithm: 'lttb',
-                            samples: 100
-                        }
-                    },
+                    ...commonOptions,
                     scales: {
                         y: {
                             beginAtZero: false,
+                            ticks: {
+                                padding: 10,
+                                font: {
+                                    size: 11
+                                }
+                            },
                             grid: {
                                 drawBorder: false,
                                 color: 'rgba(0, 0, 0, 0.05)'
                             }
                         },
                         x: {
+                            ticks: {
+                                padding: 10,
+                                font: {
+                                    size: 11
+                                },
+                                maxRotation: 45,
+                                minRotation: 0
+                            },
                             grid: {
                                 display: false
                             }
@@ -298,7 +397,24 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            initCharts();
+            // Initialize charts with a small delay to ensure DOM is fully painted
+            setTimeout(function() {
+                initCharts();
+            }, 100);
+            
+            // Handle window resize - redraw charts responsively
+            let resizeTimeout;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(function() {
+                    if (altitudeChart) {
+                        altitudeChart.resize();
+                    }
+                    if (temperatureChart) {
+                        temperatureChart.resize();
+                    }
+                }, 250);
+            });
             
             // Handle page visibility to pause/resume updates
             document.addEventListener('visibilitychange', function() {
@@ -307,7 +423,9 @@
                     destroyCharts();
                 } else {
                     // Page is visible again - reinitialize charts
-                    initCharts();
+                    setTimeout(function() {
+                        initCharts();
+                    }, 100);
                 }
             });
 
