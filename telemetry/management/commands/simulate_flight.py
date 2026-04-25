@@ -13,17 +13,36 @@ class Command(BaseCommand):
             default=5,
             help='Interval in seconds between simulation steps'
         )
+        parser.add_argument(
+            '--balloon-id',
+            type=str,
+            help='Specific balloon ID to simulate (if not provided, simulates all balloons)'
+        )
 
     def handle(self, *args, **options):
         interval = options['interval']
-        self.stdout.write(self.style.SUCCESS(f"Starting flight simulation with {interval}s interval... Press Ctrl+C to stop."))
+        balloon_id = options['balloon_id']
+        
+        if balloon_id:
+            self.stdout.write(self.style.SUCCESS(f"Starting flight simulation for balloon '{balloon_id}' with {interval}s interval... Press Ctrl+C to stop."))
+        else:
+            self.stdout.write(self.style.SUCCESS(f"Starting flight simulation for all balloons with {interval}s interval... Press Ctrl+C to stop."))
+        
         initial_pass = True
         
         try:
             while True:
-                balloons = Balloon.objects.filter(status__in=['active', 'IN_FLIGHT'])
-                if not balloons.exists():
-                    balloons = Balloon.objects.all()
+                if balloon_id:
+                    # Target specific balloon
+                    balloons = Balloon.objects.filter(balloon_id=balloon_id)
+                    if not balloons.exists():
+                        self.stdout.write(self.style.ERROR(f"Balloon with ID '{balloon_id}' not found!"))
+                        return
+                else:
+                    # Simulate all balloons (existing logic)
+                    balloons = Balloon.objects.filter(status__in=['active', 'IN_FLIGHT'])
+                    if not balloons.exists():
+                        balloons = Balloon.objects.all()
                 
                 for balloon in balloons:
                     latest = balloon.telemetry.order_by('-timestamp').first()
@@ -61,7 +80,10 @@ class Command(BaseCommand):
                     )
                 
                 initial_pass = False
-                self.stdout.write(f"Generated new telemetry for {balloons.count()} balloons.")
+                if balloon_id:
+                    self.stdout.write(f"Generated new telemetry for balloon '{balloon_id}'.")
+                else:
+                    self.stdout.write(f"Generated new telemetry for {balloons.count()} balloons.")
                 time.sleep(interval)
                 
         except KeyboardInterrupt:

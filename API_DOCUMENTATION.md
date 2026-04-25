@@ -124,10 +124,18 @@ python manage.py generate_mock_data
 
 ### Flight Simulation
 Continuously simulate balloon flight with realistic telemetry:
+
+**Simulate all balloons:**
 ```bash
 python manage.py simulate_flight --interval 5
 ```
-This creates new telemetry points every 5 seconds for all balloons.
+
+**Simulate specific balloon:**
+```bash
+python manage.py simulate_flight --balloon-id B001 --interval 5
+```
+
+This creates new telemetry points every 5 seconds for the specified balloon or all balloons.
 
 ## Data Models
 
