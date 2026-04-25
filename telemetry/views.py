@@ -37,6 +37,38 @@ def receive_image_metadata(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+@csrf_exempt
+@require_POST
+def receive_telemetry(request):
+    try:
+        data = json.loads(request.body)
+        balloon_id = data.get('balloon_id')
+        
+        if not balloon_id:
+            return JsonResponse({'error': 'Missing balloon_id'}, status=400)
+            
+        try:
+            balloon = Balloon.objects.get(balloon_id=balloon_id)
+        except Balloon.DoesNotExist:
+            return JsonResponse({'error': 'Balloon not found'}, status=404)
+            
+        # Create telemetry data
+        TelemetryData.objects.create(
+            balloon=balloon,
+            latitude=data.get('latitude'),
+            longitude=data.get('longitude'),
+            altitude=data.get('altitude'),
+            temperature=data.get('temperature'),
+            battery_level=data.get('battery_level')
+        )
+        
+        return JsonResponse({'message': 'Telemetry data saved successfully'}, status=201)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
 def latest_telemetry(request):
     balloons = Balloon.objects.all()
     data = []

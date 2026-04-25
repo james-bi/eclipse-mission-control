@@ -34,7 +34,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY', default="django-insecure-wl+04k9^o919wvgz0shg2sf99++)+_#zt_p)v5bi44yjvhft_y")
+SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
@@ -93,7 +93,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.getenv('DB_NAME', 'eclipse_mission_control'),
         'USER': os.getenv('DB_USER', 'eclipse_user'), # Use 'root' or whatever is in your .env
-        'PASSWORD': os.getenv('DB_PASSWORD', 'iGCnGKM27VL2bdGaT8W9SiqC6VmSsjn8kHrhD3E07XQLJCqeC1'), # It will look for the KEY 'DB_PASSWORD'
+        'PASSWORD': env('DB_PASSWORD'), # It will look for the KEY 'DB_PASSWORD'
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '3306'),
         'OPTIONS': {
