@@ -87,9 +87,19 @@ curl -X POST http://your-server.com/api/image/receive/ \
   }'
 ```
 
-### 3. Get Latest Telemetry (Dashboard)
-**Endpoint:** `GET /api/telemetry/`  
-**Response:** JSON array of all balloons with their latest telemetry data
+### 4. Get Balloon Detail Dashboard
+**Endpoint:** `GET /balloon/<balloon_id>/`  
+**Response:** Full HTML page with interactive balloon dashboard
+
+#### Features:
+- Real-time telemetry display (latitude, longitude, altitude, ascent rate, temperature)
+- Interactive Google Maps with flight path visualization
+- Altitude and temperature charts over time
+- Onboard camera image carousel
+- Responsive design for all devices
+
+#### Example
+Visit `http://your-server.com/balloon/scout-1/` in a web browser to view the dedicated dashboard for balloon "scout-1".
 
 ## Balloon Setup
 

@@ -137,3 +137,31 @@ def get_balloon_image(request, balloon_id):
         'balloon': balloon,
         'image': image
     })
+
+def balloon_detail(request, balloon_id):
+    balloon = get_object_or_404(Balloon, balloon_id=balloon_id)
+    
+    # Get latest telemetry
+    latest_telemetry = balloon.telemetry.order_by('-timestamp').first()
+    
+    # Get all telemetry for charts
+    telemetry_data = list(balloon.telemetry.order_by('timestamp').values('timestamp', 'altitude', 'latitude', 'longitude'))
+    
+    # Calculate ascent rate (m/s) from last two points
+    ascent_rate = 0
+    if len(telemetry_data) >= 2:
+        recent = telemetry_data[-2:]
+        time_diff = (recent[1]['timestamp'] - recent[0]['timestamp']).total_seconds()
+        alt_diff = recent[1]['altitude'] - recent[0]['altitude']
+        if time_diff > 0:
+            ascent_rate = alt_diff / time_diff
+    
+    context = {
+        'balloon': balloon,
+        'latest_telemetry': latest_telemetry,
+        'telemetry_data': telemetry_data,
+        'ascent_rate': round(ascent_rate, 2),
+        'google_maps_api_key': 'AIzaSyCKkt3WQ48-xNJPOhruaIaxV6-GB35XEgE',  # Replace with actual key
+    }
+    
+    return render(request, 'telemetry/balloon_detail.html', context)
