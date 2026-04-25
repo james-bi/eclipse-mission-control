@@ -17,6 +17,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         interval = options['interval']
         self.stdout.write(self.style.SUCCESS(f"Starting flight simulation with {interval}s interval... Press Ctrl+C to stop."))
+        initial_pass = True
         
         try:
             while True:
@@ -27,8 +28,8 @@ class Command(BaseCommand):
                 for balloon in balloons:
                     latest = balloon.telemetry.order_by('-timestamp').first()
                     
-                    if latest:
-                        # Move slightly
+                    if latest and not initial_pass:
+                        # Continue from last known telemetry
                         lat = float(latest.latitude) + random.uniform(-0.01, 0.01)
                         lon = float(latest.longitude) + random.uniform(-0.01, 0.01)
                         
@@ -43,7 +44,7 @@ class Command(BaseCommand):
                         # Battery drains
                         battery = max(0.0, float(latest.battery_level) - random.uniform(0.05, 0.5))
                     else:
-                        # Fallback if no initial data
+                        # Start from ground for this simulation run
                         lat = random.uniform(30.0, 45.0)
                         lon = random.uniform(-120.0, -75.0)
                         alt = random.uniform(100, 500)
@@ -59,6 +60,7 @@ class Command(BaseCommand):
                         battery_level=battery
                     )
                 
+                initial_pass = False
                 self.stdout.write(f"Generated new telemetry for {balloons.count()} balloons.")
                 time.sleep(interval)
                 
