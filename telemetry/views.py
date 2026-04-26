@@ -1,10 +1,12 @@
 from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 import json
 from .models import Balloon, BalloonImage, TelemetryData
 
+@login_required
 def dashboard_view(request):
     balloons = Balloon.objects.all()
     return render(request, 'dashboard.html', {'balloons': balloons})
@@ -69,6 +71,7 @@ def receive_telemetry(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+@login_required
 def latest_telemetry(request):
     balloons = Balloon.objects.all()
     data = []
@@ -108,6 +111,7 @@ def latest_telemetry(request):
             
     return JsonResponse({'telemetry': data})
 
+@login_required
 def get_balloon_image(request, balloon_id):
     from django.shortcuts import get_object_or_404
     balloon = get_object_or_404(Balloon, balloon_id=balloon_id)
@@ -138,6 +142,7 @@ def get_balloon_image(request, balloon_id):
         'image': image
     })
 
+@login_required
 def balloon_telemetry_api(request, balloon_id):
     balloon = get_object_or_404(Balloon, balloon_id=balloon_id)
 
@@ -177,6 +182,7 @@ def balloon_telemetry_api(request, balloon_id):
     })
 
 
+@login_required
 def balloon_detail(request, balloon_id):
     balloon = get_object_or_404(Balloon, balloon_id=balloon_id)
     

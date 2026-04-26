@@ -21,6 +21,7 @@ from telemetry import views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("", include("django.contrib.auth.urls")),
     path("", views.dashboard_view, name="dashboard"),
     path("api/telemetry/", views.latest_telemetry, name="api_telemetry"),
     path("api/telemetry/receive/", views.receive_telemetry, name="receive_telemetry"),
