@@ -148,6 +148,7 @@
         let altitudeChart;
         let temperatureChart;
         let balloonTelemetry = [];
+        const balloonId = '{{ balloon.balloon_id|escapejs }}';
         const refreshIntervalMs = 5000;
 
         function getTelemetryData() {
@@ -223,7 +224,7 @@
 
         async function fetchTelemetryUpdate() {
             try {
-                const response = await fetch(`/api/telemetry/${encodeURIComponent('{{ balloon.balloon_id }}')}/`);
+                const response = await fetch(`/api/telemetry/${encodeURIComponent(balloonId)}/`);
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
