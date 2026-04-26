@@ -138,6 +138,45 @@ def get_balloon_image(request, balloon_id):
         'image': image
     })
 
+def balloon_telemetry_api(request, balloon_id):
+    balloon = get_object_or_404(Balloon, balloon_id=balloon_id)
+
+    max_points = 500
+    total_telemetry = balloon.telemetry.count()
+    skip_points = max(0, total_telemetry - max_points)
+    telemetry_qs = balloon.telemetry.order_by('timestamp').values('timestamp', 'altitude', 'latitude', 'longitude', 'temperature')
+    telemetry_data = list(telemetry_qs[skip_points:])
+
+    ascent_rate = 0
+    if len(telemetry_data) >= 2:
+        recent = telemetry_data[-2:]
+        time_diff = (recent[1]['timestamp'] - recent[0]['timestamp']).total_seconds()
+        alt_diff = recent[1]['altitude'] - recent[0]['altitude']
+        if time_diff > 0:
+            ascent_rate = alt_diff / time_diff
+
+    latest_telemetry = balloon.telemetry.order_by('-timestamp').first()
+
+    return JsonResponse({
+        'balloon_id': balloon.balloon_id,
+        'latest_telemetry': {
+            'latitude': round(latest_telemetry.latitude, 4) if latest_telemetry else 'N/A',
+            'longitude': round(latest_telemetry.longitude, 4) if latest_telemetry else 'N/A',
+            'altitude': round(latest_telemetry.altitude, 0) if latest_telemetry else 'N/A',
+            'temperature': round(latest_telemetry.temperature, 1) if latest_telemetry else 'N/A',
+            'timestamp': latest_telemetry.timestamp.isoformat() if latest_telemetry else None,
+        },
+        'ascent_rate': round(ascent_rate, 2),
+        'telemetry_data': [{
+            'timestamp': point['timestamp'].isoformat(),
+            'altitude': point['altitude'],
+            'latitude': point['latitude'],
+            'longitude': point['longitude'],
+            'temperature': point['temperature'],
+        } for point in telemetry_data]
+    })
+
+
 def balloon_detail(request, balloon_id):
     balloon = get_object_or_404(Balloon, balloon_id=balloon_id)
     

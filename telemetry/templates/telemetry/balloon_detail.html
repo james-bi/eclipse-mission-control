@@ -70,23 +70,23 @@
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
             <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div class="text-center">
-                    <div class="text-xl font-bold text-slate-800">{{ latest_telemetry.latitude|default:"N/A"|floatformat:4 }}</div>
+                    <div id="stat-latitude" class="text-xl font-bold text-slate-800">{{ latest_telemetry.latitude|default:"N/A"|floatformat:4 }}</div>
                     <div class="text-sm text-slate-500">Latitude</div>
                 </div>
                 <div class="text-center">
-                    <div class="text-xl font-bold text-slate-800">{{ latest_telemetry.longitude|default:"N/A"|floatformat:4 }}</div>
+                    <div id="stat-longitude" class="text-xl font-bold text-slate-800">{{ latest_telemetry.longitude|default:"N/A"|floatformat:4 }}</div>
                     <div class="text-sm text-slate-500">Longitude</div>
                 </div>
                 <div class="text-center">
-                    <div class="text-xl font-bold text-slate-800">{{ latest_telemetry.altitude|default:"N/A"|floatformat:0 }}m</div>
+                    <div id="stat-altitude" class="text-xl font-bold text-slate-800">{{ latest_telemetry.altitude|default:"N/A"|floatformat:0 }}m</div>
                     <div class="text-sm text-slate-500">Altitude</div>
                 </div>
                 <div class="text-center">
-                    <div class="text-xl font-bold text-slate-800">{{ ascent_rate }} m/s</div>
+                    <div id="stat-ascent_rate" class="text-xl font-bold text-slate-800">{{ ascent_rate }} m/s</div>
                     <div class="text-sm text-slate-500">Ascent Rate</div>
                 </div>
                 <div class="text-center">
-                    <div class="text-xl font-bold text-slate-800">{{ latest_telemetry.temperature|default:"N/A"|floatformat:1 }}°C</div>
+                    <div id="stat-temperature" class="text-xl font-bold text-slate-800">{{ latest_telemetry.temperature|default:"N/A"|floatformat:1 }}°C</div>
                     <div class="text-sm text-slate-500">Temperature</div>
                 </div>
             </div>
@@ -123,7 +123,7 @@
         <!-- Image Carousel -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h3 class="text-lg font-semibold text-slate-800 mb-4">Onboard Camera</h3>
-            <div id="image-carousel" hx-get="{% url 'get_balloon_image' balloon.balloon_id %}" hx-trigger="load, every 30s">
+            <div id="image-carousel" hx-get="{% url 'get_balloon_image' balloon.balloon_id %}" hx-trigger="load, every 5s">
                 {% if balloon.images.exists %}
                     {% with image=balloon.images.first %}
                     <div class="text-center">
@@ -144,20 +144,121 @@
     <script>
         let map;
         let flightPath;
+        let currentMarker;
         let altitudeChart;
         let temperatureChart;
+        let balloonTelemetry = [];
+        const refreshIntervalMs = 5000;
 
         function getTelemetryData() {
-            const telemetryElement = document.getElementById('telemetry-data');
-            if (!telemetryElement) {
-                return [];
+            return balloonTelemetry;
+        }
+
+        function updateStats(telemetry) {
+            document.getElementById('stat-latitude').textContent = telemetry.latest_telemetry.latitude;
+            document.getElementById('stat-longitude').textContent = telemetry.latest_telemetry.longitude;
+            document.getElementById('stat-altitude').textContent = telemetry.latest_telemetry.altitude !== 'N/A' ? `${telemetry.latest_telemetry.altitude}m` : 'N/A';
+            document.getElementById('stat-ascent_rate').textContent = `${telemetry.ascent_rate} m/s`;
+            document.getElementById('stat-temperature').textContent = telemetry.latest_telemetry.temperature !== 'N/A' ? `${telemetry.latest_telemetry.temperature}°C` : 'N/A';
+        }
+
+        function applyTelemetryUpdate(data) {
+            balloonTelemetry = data.telemetry_data;
+            updateStats(data);
+            refreshCharts();
+            updateMap();
+        }
+
+        function updateMap() {
+            if (!Array.isArray(balloonTelemetry) || balloonTelemetry.length === 0) {
+                return;
             }
+
+            if (typeof google === 'undefined' || !google.maps) {
+                return;
+            }
+
+            const latest = balloonTelemetry[balloonTelemetry.length - 1];
+            const pathCoordinates = balloonTelemetry.map(point => ({
+                lat: parseFloat(point.latitude),
+                lng: parseFloat(point.longitude)
+            }));
+
+            if (!map) {
+                initMap();
+                return;
+            }
+
+            if (!flightPath) {
+                flightPath = new google.maps.Polyline({
+                    path: pathCoordinates,
+                    geodesic: true,
+                    strokeColor: '#3B82F6',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                    map: map
+                });
+            } else {
+                flightPath.setPath(pathCoordinates);
+            }
+
+            const position = {
+                lat: parseFloat(latest.latitude),
+                lng: parseFloat(latest.longitude)
+            };
+
+            if (!currentMarker) {
+                currentMarker = new google.maps.Marker({
+                    position: position,
+                    map: map,
+                    title: 'Current Position',
+                    icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+                });
+            } else {
+                currentMarker.setPosition(position);
+            }
+
+            map.setCenter(position);
+        }
+
+        async function fetchTelemetryUpdate() {
             try {
-                return JSON.parse(telemetryElement.textContent || '[]');
+                const response = await fetch(`/api/telemetry/${encodeURIComponent('{{ balloon.balloon_id }}')}/`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                applyTelemetryUpdate(data);
             } catch (error) {
-                console.error('Failed to parse telemetry JSON:', error);
-                return [];
+                console.error('Failed to refresh telemetry:', error);
             }
+        }
+
+        function refreshCharts() {
+            const telemetryData = getTelemetryData();
+            if (!altitudeChart || !temperatureChart) {
+                initCharts();
+                return;
+            }
+
+            const maxChartPoints = 200;
+            let startIdx = 0;
+            if (telemetryData.length > maxChartPoints) {
+                startIdx = telemetryData.length - maxChartPoints;
+            }
+
+            const displayData = telemetryData.slice(startIdx);
+            const labels = displayData.map(point => new Date(point.timestamp).toLocaleTimeString());
+            const altitudes = displayData.map(point => point.altitude);
+            const temperatures = displayData.map(point => point.temperature);
+
+            altitudeChart.data.labels = labels;
+            altitudeChart.data.datasets[0].data = altitudes;
+            altitudeChart.update();
+
+            temperatureChart.data.labels = labels;
+            temperatureChart.data.datasets[0].data = temperatures;
+            temperatureChart.update();
         }
 
         function initMap() {
@@ -397,10 +498,24 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            const telemetryElement = document.getElementById('telemetry-data');
+            if (telemetryElement) {
+                try {
+                    balloonTelemetry = JSON.parse(telemetryElement.textContent || '[]');
+                } catch (error) {
+                    console.error('Failed to parse initial telemetry JSON:', error);
+                    balloonTelemetry = [];
+                }
+            }
+
             // Initialize charts with a small delay to ensure DOM is fully painted
             setTimeout(function() {
                 initCharts();
+                updateMap();
             }, 100);
+
+            // Poll telemetry every 5 seconds to keep charts and stats fresh during simulation
+            setInterval(fetchTelemetryUpdate, refreshIntervalMs);
             
             // Handle window resize - redraw charts responsively
             let resizeTimeout;

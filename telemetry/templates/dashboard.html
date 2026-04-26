@@ -49,7 +49,7 @@
         <!-- Container polling the JSON endpoint via HTMX and rendering via Mustache -->
         <div hx-ext="client-side-templates">
             <div hx-get="/api/telemetry/" 
-                 hx-trigger="load, every 30s" 
+                 hx-trigger="load, every 5s" 
                  hx-swap="innerHTML"
                  mustache-template="balloon-template"
                  class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
