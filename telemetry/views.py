@@ -20,10 +20,10 @@ def receive_image_metadata(request):
         if not balloon_id or not image_url:
             return JsonResponse({'error': 'Missing balloon_id or url'}, status=400)
 
-        try:
-            balloon = Balloon.objects.get(balloon_id=balloon_id)
-        except Balloon.DoesNotExist:
-            return JsonResponse({'error': 'Balloon not found'}, status=404)
+        balloon, created = Balloon.objects.get_or_create(
+            balloon_id=balloon_id,
+            defaults={'name': balloon_id, 'status': 'active'}
+        )
 
         image = BalloonImage.objects.create(balloon=balloon, image_url=image_url)
         
@@ -47,10 +47,10 @@ def receive_telemetry(request):
         if not balloon_id:
             return JsonResponse({'error': 'Missing balloon_id'}, status=400)
             
-        try:
-            balloon = Balloon.objects.get(balloon_id=balloon_id)
-        except Balloon.DoesNotExist:
-            return JsonResponse({'error': 'Balloon not found'}, status=404)
+        balloon, created = Balloon.objects.get_or_create(
+            balloon_id=balloon_id,
+            defaults={'name': balloon_id, 'status': 'active'}
+        )
             
         # Create telemetry data
         TelemetryData.objects.create(
