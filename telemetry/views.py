@@ -3,8 +3,18 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.utils.text import slugify
 import json
 from .models import Balloon, BalloonImage, TelemetryData
+
+def sanitize_balloon_id(balloon_id):
+    """
+    Convert any string to a valid SlugField value.
+    Replaces spaces and special characters with hyphens.
+    """
+    if not balloon_id:
+        return None
+    return slugify(balloon_id)
 
 @login_required
 def dashboard_view(request):
