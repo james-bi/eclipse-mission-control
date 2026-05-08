@@ -42,7 +42,7 @@ def get_s3_signed_url(s3_url, expiration=3600):
                 bucket = parts[0]
                 region_and_key = parts[1].split('/', 1)
                 if len(region_and_key) == 2:
-                    region = region_and_key[0]
+                    region = region_and_key[0].split('.')[0]  # Extract region from region.amazonaws.com
                     key = region_and_key[1]
                 else:
                     return s3_url
@@ -117,15 +117,22 @@ def receive_image_metadata(request):
 @csrf_exempt
 @require_POST
 def receive_photo_notification(request):
-    # TODO: Update this function based on the data structure provided by the user
+    """
+    Receive photo notifications from balloons.
+    Expects JSON with balloon_id and url fields.
+    """
     try:
         data = json.loads(request.body)
         balloon_id = data.get('balloon_id')
-        # Assuming similar structure for now, update when data structure is provided
-        image_url = data.get('url') or data.get('photo_url') or data.get('image_url')
+        image_url = data.get('url')
 
         if not balloon_id or not image_url:
-            return JsonResponse({'error': 'Missing balloon_id or photo URL'}, status=400)
+            return JsonResponse({'error': 'Missing balloon_id or url'}, status=400)
+
+        # Sanitize balloon_id to ensure it's a valid slug
+        balloon_id = sanitize_balloon_id(balloon_id)
+        if not balloon_id:
+            return JsonResponse({'error': 'Invalid balloon_id'}, status=400)
 
         balloon, created = Balloon.objects.get_or_create(
             balloon_id=balloon_id,
