@@ -44,6 +44,111 @@
             width: 100%;
             max-width: 80rem;
         }
+
+        /* Flight Phase Color Bar Styles */
+        .flight-phase-bar {
+            width: 100%;
+            padding: 1rem;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Blink animations for different phases */
+        @keyframes blink-std {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0.4; }
+        }
+
+        @keyframes blink-fast {
+            0%, 33% { opacity: 1; }
+            34%, 66% { opacity: 0.3; }
+            67%, 100% { opacity: 1; }
+        }
+
+        @keyframes blink-transition {
+            0%, 20% { opacity: 1; }
+            40%, 60% { opacity: 0.2; }
+            80%, 100% { opacity: 1; }
+        }
+
+        /* GROUND - AMBER blinking */
+        .flight-phase-ground {
+            background-color: #f59e0b;
+            animation: blink-std 1.2s infinite;
+        }
+
+        /* ASCENT_LOW - GREEN blinking on transition */
+        .flight-phase-ascent-low {
+            background-color: #10b981;
+            animation: blink-transition 1.5s;
+        }
+
+        /* ASCENT_HIGH - AMBER blinking (3 min no data) */
+        .flight-phase-ascent-high {
+            background-color: #f59e0b;
+            animation: blink-transition 1.5s;
+        }
+
+        /* NEAR_SPACE - BLUE blinking constantly */
+        .flight-phase-near-space {
+            background-color: #0ea5e9;
+            animation: blink-fast 0.8s infinite;
+        }
+
+        /* DESCENT - GREEN blinking */
+        .flight-phase-descent {
+            background-color: #10b981;
+            animation: blink-std 1.2s infinite;
+        }
+
+        /* LANDING/SHUTDOWN - RED blinking */
+        .flight-phase-landing {
+            background-color: #ef4444;
+            animation: blink-std 1.2s infinite;
+        }
+
+        /* LANDED - SOLID RED */
+        .flight-phase-landed {
+            background-color: #dc2626;
+            animation: none;
+        }
+
+        /* Waiting/No Data - AMBER blinking */
+        .flight-phase-no-data {
+            background-color: #f59e0b;
+            animation: blink-std 1.2s infinite;
+        }
+
+        /* Data transmitting indicator */
+        .data-transmitting {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-left: 1rem;
+        }
+
+        .data-transmitting::before {
+            content: '';
+            width: 0.5rem;
+            height: 0.5rem;
+            background-color: currentColor;
+            border-radius: 50%;
+            animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen font-sans">
@@ -68,11 +173,14 @@
     <div class="max-w-7xl mx-auto p-4">
         <!-- Real-time Stats -->
         <div class="sticky top-0 z-50 bg-white rounded-xl shadow-lg border border-slate-200 mb-6 overflow-hidden">
-            <!-- Flight Phase Indicator -->
-            <div class="bg-gradient-to-r from-red-500 via-amber-500 to-green-500 w-full p-3 text-center text-white font-bold tracking-widest uppercase">
-                <span class="animate-pulse flex items-center justify-center space-x-2">
+        <!-- Flight Phase Indicator -->
+            <div id="flight-phase-bar" class="flight-phase-bar flight-phase-ground">
+                <span class="flex items-center justify-center space-x-2">
                     <span>🚀 Flight Phase:</span>
-                    <span id="stat-flight-phase">{{ latest_telemetry.flight_phase|default:"WAITING FOR DATA" }}</span>
+                    <span id="stat-flight-phase">WAITING FOR DATA</span>
+                    <span id="data-transmitting-indicator" class="data-transmitting" style="display: none;">
+                        Data Transmitting
+                    </span>
                 </span>
             </div>
             
@@ -164,9 +272,101 @@
         let balloonTelemetry = [];
         const balloonId = '{{ balloon.balloon_id|escapejs }}';
         const refreshIntervalMs = 5000;
+        let lastDataTimestamp = null;
 
         function getTelemetryData() {
             return balloonTelemetry;
+        }
+
+        /**
+         * Determine flight phase based on:
+         * - Time since last data reception
+         * - Current flight phase from telemetry
+         * - Altitude data
+         */
+        function determineFlightPhase(telemetry) {
+            if (!telemetry.latest_telemetry.timestamp) {
+                return {
+                    phase: 'WAITING FOR DATA',
+                    cssClass: 'flight-phase-no-data',
+                    showTransmitting: false
+                };
+            }
+
+            const lastTimestamp = new Date(telemetry.latest_telemetry.timestamp);
+            const now = new Date();
+            const timeSinceLastDataMs = now - lastTimestamp;
+            const timeSinceLastDataSecs = timeSinceLastDataMs / 1000;
+            const timeSinceLastDataMins = timeSinceLastDataMs / (1000 * 60);
+
+            // Data is being transmitting if we got data within last 10 seconds
+            const isDataTransmitting = timeSinceLastDataSecs < 10;
+
+            // Get flight phase from telemetry or determine based on time without data
+            let reportedPhase = telemetry.latest_telemetry.flight_phase || '';
+            
+            // Time-based phase determination
+            const threeMinsSecs = 3 * 60;
+            const sixtyMinsMins = 60;
+
+            // If telemetry reports a specific phase, use it with appropriate styling
+            if (reportedPhase === 'GROUND') {
+                return {
+                    phase: 'GROUND',
+                    cssClass: 'flight-phase-ground',
+                    showTransmitting: isDataTransmitting
+                };
+            } else if (reportedPhase === 'ASCENT_LOW') {
+                return {
+                    phase: 'ASCENT_LOW',
+                    cssClass: 'flight-phase-ascent-low',
+                    showTransmitting: isDataTransmitting
+                };
+            } else if (reportedPhase === 'ASCENT_HIGH' || (timeSinceLastDataSecs > threeMinsSecs && timeSinceLastDataMins < sixtyMinsMins)) {
+                return {
+                    phase: 'ASCENT_HIGH (No Data)',
+                    cssClass: 'flight-phase-ascent-high',
+                    showTransmitting: false
+                };
+            } else if (reportedPhase === 'NEAR_SPACE' || (timeSinceLastDataMins >= sixtyMinsMins)) {
+                return {
+                    phase: 'NEAR_SPACE (Lost Signal)',
+                    cssClass: 'flight-phase-near-space',
+                    showTransmitting: false
+                };
+            } else if (reportedPhase === 'DESCENT') {
+                return {
+                    phase: 'DESCENT',
+                    cssClass: 'flight-phase-descent',
+                    showTransmitting: isDataTransmitting
+                };
+            } else if (reportedPhase === 'LANDING' || reportedPhase === 'SHUTDOWN') {
+                return {
+                    phase: reportedPhase,
+                    cssClass: 'flight-phase-landing',
+                    showTransmitting: isDataTransmitting
+                };
+            } else if (reportedPhase === 'LANDED') {
+                return {
+                    phase: 'LANDED',
+                    cssClass: 'flight-phase-landed',
+                    showTransmitting: false
+                };
+            } else if (isDataTransmitting) {
+                // Data is being received but no specific phase reported
+                return {
+                    phase: 'IN FLIGHT',
+                    cssClass: 'flight-phase-descent',
+                    showTransmitting: true
+                };
+            } else {
+                // Fallback when no data
+                return {
+                    phase: 'WAITING FOR DATA',
+                    cssClass: 'flight-phase-no-data',
+                    showTransmitting: false
+                };
+            }
         }
 
         function updateStats(telemetry) {
@@ -176,13 +376,26 @@
             document.getElementById('stat-ascent_rate').textContent = `${telemetry.ascent_rate} m/s`;
             document.getElementById('stat-temperature').textContent = telemetry.latest_telemetry.temperature !== 'N/A' ? `${telemetry.latest_telemetry.temperature}°C` : 'N/A';
             
-            if (telemetry.latest_telemetry.flight_phase !== 'N/A') {
-                document.getElementById('stat-flight-phase').textContent = telemetry.latest_telemetry.flight_phase;
+            // Update flight phase and styling
+            const flightPhaseInfo = determineFlightPhase(telemetry);
+            document.getElementById('stat-flight-phase').textContent = flightPhaseInfo.phase;
+            
+            const bar = document.getElementById('flight-phase-bar');
+            bar.className = 'flight-phase-bar ' + flightPhaseInfo.cssClass;
+            
+            // Show/hide data transmitting indicator
+            const transmittingIndicator = document.getElementById('data-transmitting-indicator');
+            if (flightPhaseInfo.showTransmitting) {
+                transmittingIndicator.style.display = 'inline-flex';
+            } else {
+                transmittingIndicator.style.display = 'none';
             }
+            
             if (telemetry.latest_telemetry.timestamp) {
                 const date = new Date(telemetry.latest_telemetry.timestamp);
                 const timeString = date.toLocaleTimeString([], { hour12: false });
                 document.getElementById('stat-timestamp').textContent = timeString;
+                lastDataTimestamp = telemetry.latest_telemetry.timestamp;
             }
         }
 
@@ -191,6 +404,31 @@
             updateStats(data);
             refreshCharts();
             updateMap();
+        }
+
+        /**
+         * Periodically update flight phase display based on time elapsed
+         * This is important for phases that depend on time since last data
+         */
+        function updateFlightPhaseDisplay() {
+            if (lastDataTimestamp) {
+                const mockData = {
+                    latest_telemetry: {
+                        timestamp: lastDataTimestamp,
+                        flight_phase: document.getElementById('stat-flight-phase').textContent
+                    }
+                };
+                
+                const flightPhaseInfo = determineFlightPhase(mockData);
+                const bar = document.getElementById('flight-phase-bar');
+                const currentClasses = bar.className;
+                const newClasses = 'flight-phase-bar ' + flightPhaseInfo.cssClass;
+                
+                // Only update if the class changed
+                if (newClasses !== currentClasses) {
+                    bar.className = newClasses;
+                }
+            }
         }
 
         function updateMap() {
@@ -540,6 +778,9 @@
 
             // Poll telemetry every 5 seconds to keep charts and stats fresh during simulation
             setInterval(fetchTelemetryUpdate, refreshIntervalMs);
+            
+            // Update flight phase display every second to catch time-based phase changes
+            setInterval(updateFlightPhaseDisplay, 1000);
             
             // Handle window resize - redraw charts responsively
             let resizeTimeout;
