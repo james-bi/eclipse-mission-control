@@ -4,7 +4,10 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils.text import slugify
+from django.conf import settings
 import json
+import boto3
+from botocore.exceptions import NoCredentialsError
 from .models import Balloon, BalloonImage, TelemetryData
 
 def sanitize_balloon_id(balloon_id):
@@ -15,6 +18,68 @@ def sanitize_balloon_id(balloon_id):
     if not balloon_id:
         return None
     return slugify(balloon_id)
+
+def get_s3_signed_url(s3_url, expiration=3600):
+    """
+    Generate a signed URL for S3 objects if AWS credentials are configured.
+    Returns the original URL if not an S3 URL or credentials not available.
+    """
+    if not s3_url or not s3_url.startswith('https://') or 's3' not in s3_url:
+        return s3_url
+    
+    # Check if AWS credentials are configured
+    if not all([settings.AWS_ACCESS_KEY_ID, settings.AWS_SECRET_ACCESS_KEY, settings.AWS_REGION]):
+        return s3_url
+    
+    try:
+        # Parse S3 URL to extract bucket and key
+        # URL format: https://bucket-name.s3.region.amazonaws.com/key
+        # or https://s3.region.amazonaws.com/bucket-name/key
+        if '.s3.' in s3_url:
+            # https://bucket-name.s3.region.amazonaws.com/key
+            parts = s3_url.replace('https://', '').split('.s3.')
+            if len(parts) == 2:
+                bucket = parts[0]
+                region_and_key = parts[1].split('/', 1)
+                if len(region_and_key) == 2:
+                    region = region_and_key[0]
+                    key = region_and_key[1]
+                else:
+                    return s3_url
+            else:
+                return s3_url
+        elif 's3.' in s3_url:
+            # https://s3.region.amazonaws.com/bucket-name/key
+            parts = s3_url.replace('https://', '').split('/', 2)
+            if len(parts) >= 3:
+                region = parts[0].replace('s3.', '').replace('.amazonaws.com', '')
+                bucket = parts[1]
+                key = parts[2]
+            else:
+                return s3_url
+        else:
+            return s3_url
+        
+        # Create S3 client
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_REGION
+        )
+        
+        # Generate signed URL
+        signed_url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': bucket, 'Key': key},
+            ExpiresIn=expiration
+        )
+        
+        return signed_url
+        
+    except (NoCredentialsError, Exception) as e:
+        # If signing fails, return original URL
+        return s3_url
 
 @login_required
 def dashboard_view(request):
@@ -41,6 +106,36 @@ def receive_image_metadata(request):
         
         return JsonResponse({
             'message': 'Image metadata saved successfully',
+            'image_id': image.id
+        }, status=201)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_POST
+def receive_photo_notification(request):
+    # TODO: Update this function based on the data structure provided by the user
+    try:
+        data = json.loads(request.body)
+        balloon_id = data.get('balloon_id')
+        # Assuming similar structure for now, update when data structure is provided
+        image_url = data.get('url') or data.get('photo_url') or data.get('image_url')
+
+        if not balloon_id or not image_url:
+            return JsonResponse({'error': 'Missing balloon_id or photo URL'}, status=400)
+
+        balloon, created = Balloon.objects.get_or_create(
+            balloon_id=balloon_id,
+            defaults={'name': balloon_id, 'status': 'active'}
+        )
+
+        image = BalloonImage.objects.create(balloon=balloon, image_url=image_url)
+        
+        return JsonResponse({
+            'message': 'Photo notification received and saved successfully',
             'image_id': image.id
         }, status=201)
         
@@ -147,6 +242,10 @@ def get_balloon_image(request, balloon_id):
 
     if not image:
         image = balloon.images.order_by('-timestamp').first()
+
+    # Generate signed URL if it's an S3 URL
+    if image:
+        image.image_url = get_s3_signed_url(image.image_url)
 
     return render(request, 'telemetry/partials/image_carousel.html', {
         'balloon': balloon,

@@ -87,6 +87,43 @@ curl -X POST http://your-server.com/api/image/receive/ \
   }'
 ```
 
+### 3. Receive Photo Notification
+**Endpoint:** `POST /api/photo/notify/`  
+**Content-Type:** `application/json`  
+**CSRF Exempt:** Yes
+
+#### Request Body
+```json
+{
+  "balloon_id": "string",  // Required: Unique identifier for the balloon
+  "url": "string"          // Required: URL to the photo on S3 (or photo_url/image_url depending on final structure)
+}
+```
+
+#### Response
+**Success (201):**
+```json
+{
+  "message": "Photo notification received and saved successfully",
+  "image_id": 123
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Missing balloon_id or photo URL
+- `404 Not Found`: Balloon not found
+- `500 Internal Server Error`: Server error
+
+#### Example Request
+```bash
+curl -X POST http://your-server.com/api/photo/notify/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "balloon_id": "scout-1",
+    "url": "https://s3.amazonaws.com/your-bucket/balloon-photo-001.jpg"
+  }'
+```
+
 ### 4. Get Balloon Detail Dashboard
 **Endpoint:** `GET /balloon/<balloon_id>/`  
 **Response:** Full HTML page with interactive balloon dashboard

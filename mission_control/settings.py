@@ -141,6 +141,12 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 LOGIN_REDIRECT_URL = "/"
 LOGIN_URL = "/login/"
 
+# AWS S3 Settings for photo storage
+AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID', default='')
+AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY', default='')
+AWS_REGION = env('AWS_REGION', default='us-east-1')
+AWS_S3_BUCKET_NAME = env('AWS_S3_BUCKET_NAME', default='')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 

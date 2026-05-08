@@ -27,6 +27,7 @@ urlpatterns = [
     path("api/telemetry/receive/", views.receive_telemetry, name="receive_telemetry"),
     path("api/telemetry/<slug:balloon_id>/", views.balloon_telemetry_api, name="api_balloon_telemetry"),
     path("api/image/receive/", views.receive_image_metadata, name="receive_image_metadata"),
+    path("api/photo/notify/", views.receive_photo_notification, name="receive_photo_notification"),
     path("balloon/<slug:balloon_id>/", views.balloon_detail, name="balloon_detail"),
     path("", include("telemetry.urls")),
 ]
