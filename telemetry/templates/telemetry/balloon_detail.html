@@ -67,27 +67,41 @@
 
     <div class="max-w-7xl mx-auto p-4">
         <!-- Real-time Stats -->
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div class="text-center">
-                    <div id="stat-latitude" class="text-xl font-bold text-slate-800">{{ latest_telemetry.latitude|default:"N/A"|floatformat:4 }}</div>
-                    <div class="text-sm text-slate-500">Latitude</div>
-                </div>
-                <div class="text-center">
-                    <div id="stat-longitude" class="text-xl font-bold text-slate-800">{{ latest_telemetry.longitude|default:"N/A"|floatformat:4 }}</div>
-                    <div class="text-sm text-slate-500">Longitude</div>
-                </div>
-                <div class="text-center">
-                    <div id="stat-altitude" class="text-xl font-bold text-slate-800">{{ latest_telemetry.altitude|default:"N/A"|floatformat:0 }}m</div>
-                    <div class="text-sm text-slate-500">Altitude</div>
-                </div>
-                <div class="text-center">
-                    <div id="stat-ascent_rate" class="text-xl font-bold text-slate-800">{{ ascent_rate }} m/s</div>
-                    <div class="text-sm text-slate-500">Ascent Rate</div>
-                </div>
-                <div class="text-center">
-                    <div id="stat-temperature" class="text-xl font-bold text-slate-800">{{ latest_telemetry.temperature|default:"N/A"|floatformat:1 }}°C</div>
-                    <div class="text-sm text-slate-500">Temperature</div>
+        <div class="sticky top-0 z-50 bg-white rounded-xl shadow-lg border border-slate-200 mb-6 overflow-hidden">
+            <!-- Flight Phase Indicator -->
+            <div class="bg-gradient-to-r from-red-500 via-amber-500 to-green-500 w-full p-3 text-center text-white font-bold tracking-widest uppercase">
+                <span class="animate-pulse flex items-center justify-center space-x-2">
+                    <span>🚀 Flight Phase:</span>
+                    <span id="stat-flight-phase">{{ latest_telemetry.flight_phase|default:"WAITING FOR DATA" }}</span>
+                </span>
+            </div>
+            
+            <div class="p-6">
+                <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
+                    <div class="text-center">
+                        <div id="stat-latitude" class="text-xl font-bold text-slate-800">{{ latest_telemetry.latitude|default:"N/A"|floatformat:4 }}</div>
+                        <div class="text-sm text-slate-500">Latitude</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="stat-longitude" class="text-xl font-bold text-slate-800">{{ latest_telemetry.longitude|default:"N/A"|floatformat:4 }}</div>
+                        <div class="text-sm text-slate-500">Longitude</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="stat-altitude" class="text-xl font-bold text-slate-800">{{ latest_telemetry.altitude|default:"N/A"|floatformat:0 }}m</div>
+                        <div class="text-sm text-slate-500">Altitude</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="stat-ascent_rate" class="text-xl font-bold text-slate-800">{{ ascent_rate }} m/s</div>
+                        <div class="text-sm text-slate-500">Ascent Rate</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="stat-temperature" class="text-xl font-bold text-slate-800">{{ latest_telemetry.temperature|default:"N/A"|floatformat:1 }}°C</div>
+                        <div class="text-sm text-slate-500">Temperature</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="stat-timestamp" class="text-xl font-bold text-slate-800 text-sm flex items-center justify-center h-7">{{ latest_telemetry.timestamp|date:"H:i:s"|default:"N/A" }}</div>
+                        <div class="text-sm text-slate-500">Last Packet</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -161,6 +175,15 @@
             document.getElementById('stat-altitude').textContent = telemetry.latest_telemetry.altitude !== 'N/A' ? `${telemetry.latest_telemetry.altitude}m` : 'N/A';
             document.getElementById('stat-ascent_rate').textContent = `${telemetry.ascent_rate} m/s`;
             document.getElementById('stat-temperature').textContent = telemetry.latest_telemetry.temperature !== 'N/A' ? `${telemetry.latest_telemetry.temperature}°C` : 'N/A';
+            
+            if (telemetry.latest_telemetry.flight_phase !== 'N/A') {
+                document.getElementById('stat-flight-phase').textContent = telemetry.latest_telemetry.flight_phase;
+            }
+            if (telemetry.latest_telemetry.timestamp) {
+                const date = new Date(telemetry.latest_telemetry.timestamp);
+                const timeString = date.toLocaleTimeString([], { hour12: false });
+                document.getElementById('stat-timestamp').textContent = timeString;
+            }
         }
 
         function applyTelemetryUpdate(data) {

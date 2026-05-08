@@ -21,6 +21,7 @@ class TelemetryData(models.Model):
     altitude = models.FloatField() # In meters
     temperature = models.FloatField() # In Celsius
     battery_level = models.IntegerField() # Percentage
+    flight_phase = models.CharField(max_length=50, null=True, blank=True)
 
     class Meta:
         ordering = ['-timestamp']

@@ -61,7 +61,8 @@ def receive_telemetry(request):
             longitude=data.get('longitude'),
             altitude=data.get('altitude'),
             temperature=data.get('temperature'),
-            battery_level=data.get('battery_level')
+            battery_level=data.get('battery_level'),
+            flight_phase=data.get('flight_phase')
         )
         
         return JsonResponse({'message': 'Telemetry data saved successfully'}, status=201)
@@ -169,6 +170,7 @@ def balloon_telemetry_api(request, balloon_id):
             'longitude': round(latest_telemetry.longitude, 4) if latest_telemetry else 'N/A',
             'altitude': round(latest_telemetry.altitude, 0) if latest_telemetry else 'N/A',
             'temperature': round(latest_telemetry.temperature, 1) if latest_telemetry else 'N/A',
+            'flight_phase': latest_telemetry.flight_phase if latest_telemetry else 'N/A',
             'timestamp': latest_telemetry.timestamp.isoformat() if latest_telemetry else None,
         },
         'ascent_rate': round(ascent_rate, 2),
