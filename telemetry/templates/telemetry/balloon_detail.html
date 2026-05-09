@@ -249,7 +249,7 @@
                 {% if balloon.images.exists %}
                     {% with image=balloon.images.first %}
                     <div class="text-center">
-                        <p class="text-sm font-medium text-slate-700 mb-2">{{ image.filename|default:image.image_url|split:"/"|last }}</p>
+                        <p class="text-sm font-medium text-slate-700 mb-2">{{ image.filename|default:"Image" }}</p>
                         <img src="{{ image.image_url }}" alt="Balloon Image" class="max-w-full max-h-96 mx-auto rounded-lg shadow-sm">
                         <p class="text-sm text-slate-500 mt-2">{{ image.timestamp|date:"M j, Y g:i A" }}</p>
                     </div>
