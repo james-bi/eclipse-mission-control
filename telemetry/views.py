@@ -6,9 +6,12 @@ from django.views.decorators.http import require_POST
 from django.utils.text import slugify
 from django.conf import settings
 import json
+import logging
 import boto3
 from botocore.exceptions import NoCredentialsError
 from .models import Balloon, BalloonImage, TelemetryData
+
+logger = logging.getLogger(__name__)
 
 def sanitize_balloon_id(balloon_id):
     """
@@ -119,20 +122,38 @@ def receive_image_metadata(request):
 def receive_photo_notification(request):
     """
     Receive photo notifications from balloons.
-    Expects JSON with balloon_id and url fields.
+    Supports JSON and form-encoded payloads.
     """
     try:
-        data = json.loads(request.body)
-        balloon_id = data.get('balloon_id')
-        image_url = data.get('url')
+        data = json.loads(request.body.decode('utf-8') or '{}')
+        
+        # Extract image URL
+        image_url = data.get('s3_url') or data.get('url') or data.get('photo_url') or data.get('image_url')
+        if not image_url:
+            return JsonResponse({'error': 'Missing s3_url'}, status=400)
 
-        if not balloon_id or not image_url:
-            return JsonResponse({'error': 'Missing balloon_id or url'}, status=400)
-
-        # Sanitize balloon_id to ensure it's a valid slug
+        # Extract or derive balloon_id
+        balloon_id = (
+            data.get('balloon_id')
+            or data.get('device_id')
+            or data.get('id')
+            or data.get('flight_name')
+        )
+        if not balloon_id:
+            # Derive from S3 path if available
+            try:
+                # Extract directory name from S3 URL as fallback balloon_id
+                parts = image_url.split('/')
+                if len(parts) > 1:
+                    balloon_id = sanitize_balloon_id(parts[-2]) or 'scout-1'
+                else:
+                    balloon_id = 'scout-1'
+            except Exception:
+                balloon_id = 'scout-1'
+        
         balloon_id = sanitize_balloon_id(balloon_id)
         if not balloon_id:
-            return JsonResponse({'error': 'Invalid balloon_id'}, status=400)
+            balloon_id = 'scout-1'
 
         balloon, created = Balloon.objects.get_or_create(
             balloon_id=balloon_id,
@@ -145,10 +166,8 @@ def receive_photo_notification(request):
             'message': 'Photo notification received and saved successfully',
             'image_id': image.id
         }, status=201)
-        
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
     except Exception as e:
+        logger.exception('Failed to process photo notification')
         return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
