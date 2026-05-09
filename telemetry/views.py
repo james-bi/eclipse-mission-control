@@ -183,6 +183,9 @@ def receive_logs(request):
         if not balloon_id:
             return JsonResponse({'error': 'Missing balloon_id'}, status=400)
         
+        # Normalize balloon_id to match URL slug format
+        balloon_id = sanitize_balloon_id(balloon_id)
+        
         new_logs = data.get('logs', [])
         
         # Append new logs to existing logs for this balloon
