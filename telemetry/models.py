@@ -5,6 +5,7 @@ class Balloon(models.Model):
         ('active', 'Active'),
         ('lost', 'Lost'),
         ('landed', 'Landed'),
+        ('deactivated', 'Deactivated'),
     ]
     name = models.CharField(max_length=100)
     balloon_id = models.SlugField(unique=True) # e.g., 'scout-1'

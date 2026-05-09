@@ -1,0 +1,65 @@
+<!-- Balloon Fleet List -->
+<div id="balloon-fleet-container" class="mb-10">
+    <h2 class="text-2xl font-bold text-slate-800 mb-4">Active Balloon Fleet</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {% for balloon in active_balloons %}
+        <div class="bg-white rounded-xl shadow border border-slate-200 p-6 flex flex-col justify-between hover:shadow-lg transition-shadow">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-lg font-bold text-slate-800">{{ balloon.name }}</h3>
+                <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-white {% if balloon.status in 'IN_FLIGHT,active' %}bg-emerald-500{% else %}bg-slate-400{% endif %}">
+                    {% if balloon.status in 'IN_FLIGHT,active' %}Active{% else %}Inactive{% endif %}
+                </span>
+            </div>
+            <div class="mt-auto flex space-x-2">
+                <a href="{% url 'balloon_detail' balloon.balloon_id %}" class="flex-1 text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                    View Dashboard
+                </a>
+                <button
+                    hx-post="{% url 'deactivate_balloon' balloon.balloon_id %}"
+                    hx-confirm="Are you sure you want to deactivate this balloon?"
+                    hx-target="#balloon-fleet-container"
+                    hx-swap="outerHTML"
+                    class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded-lg transition-colors text-sm"
+                    title="Deactivate Balloon">
+                    ✕
+                </button>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center text-slate-500 py-8 bg-white rounded-xl shadow-sm border border-slate-200 border-dashed">
+            No active balloons.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Deactivated Balloons -->
+{% if deactivated_balloons %}
+<div class="mb-10">
+    <details class="bg-white rounded-xl shadow-sm border border-slate-200">
+        <summary class="cursor-pointer p-6 text-lg font-bold text-slate-800 hover:bg-slate-50 transition-colors">
+            Deactivated Balloons ({{ deactivated_balloons|length }})
+            <span class="float-right text-slate-500">▼</span>
+        </summary>
+        <div class="px-6 pb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {% for balloon in deactivated_balloons %}
+                <div class="bg-slate-50 rounded-xl border border-slate-300 p-6 flex flex-col justify-between">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-lg font-bold text-slate-600">{{ balloon.name }}</h3>
+                        <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-white bg-slate-500">
+                            Deactivated
+                        </span>
+                    </div>
+                    <div class="mt-auto">
+                        <a href="{% url 'balloon_detail' balloon.balloon_id %}" class="block w-full text-center bg-slate-600 hover:bg-slate-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                            View Dashboard
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </details>
+</div>
+{% endif %}

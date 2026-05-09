@@ -90,8 +90,12 @@ def get_s3_signed_url(s3_url, expiration=3600):
 
 @login_required
 def dashboard_view(request):
-    balloons = Balloon.objects.all()
-    return render(request, 'dashboard.html', {'balloons': balloons})
+    active_balloons = Balloon.objects.exclude(status='deactivated')
+    deactivated_balloons = Balloon.objects.filter(status='deactivated')
+    return render(request, 'dashboard.html', {
+        'active_balloons': active_balloons,
+        'deactivated_balloons': deactivated_balloons
+    })
 
 @csrf_exempt
 @require_POST
@@ -258,7 +262,7 @@ def receive_telemetry(request):
 
 @login_required
 def latest_telemetry(request):
-    balloons = Balloon.objects.all()
+    balloons = Balloon.objects.exclude(status='deactivated')
     data = []
     
     for balloon in balloons:
@@ -349,6 +353,22 @@ def rotate_balloon_image(request, image_id):
     return render(request, 'telemetry/partials/image_carousel.html', {
         'balloon': balloon,
         'image': image
+    })
+
+@login_required
+def deactivate_balloon(request, balloon_id):
+    from django.shortcuts import get_object_or_404
+    balloon = get_object_or_404(Balloon, balloon_id=balloon_id)
+    
+    balloon.status = 'deactivated'
+    balloon.save()
+    
+    # Return updated fleet container
+    active_balloons = Balloon.objects.exclude(status='deactivated')
+    deactivated_balloons = Balloon.objects.filter(status='deactivated')
+    return render(request, 'telemetry/partials/balloon_fleet.html', {
+        'active_balloons': active_balloons,
+        'deactivated_balloons': deactivated_balloons
     })
 
 @login_required
