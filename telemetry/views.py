@@ -183,8 +183,17 @@ def receive_logs(request):
         if not balloon_id:
             return JsonResponse({'error': 'Missing balloon_id'}, status=400)
         
-        logs = data.get('logs', [])
-        logs_by_balloon[balloon_id] = logs
+        new_logs = data.get('logs', [])
+        
+        # Append new logs to existing logs for this balloon
+        if balloon_id not in logs_by_balloon:
+            logs_by_balloon[balloon_id] = []
+        
+        logs_by_balloon[balloon_id].extend(new_logs)
+        
+        # Keep only last 500 logs per balloon to prevent unbounded memory growth
+        if len(logs_by_balloon[balloon_id]) > 500:
+            logs_by_balloon[balloon_id] = logs_by_balloon[balloon_id][-500:]
         
         return JsonResponse({'message': 'Logs received successfully'}, status=201)
     except Exception as e:
@@ -194,13 +203,21 @@ def receive_logs(request):
 def get_balloon_logs(request, balloon_id):
     logs = logs_by_balloon.get(balloon_id, [])
     html = ''
-    for log in logs[-50:]:  # Show last 50 logs
-        timestamp = datetime.fromtimestamp(log['timestamp']).strftime('%H:%M:%S')
-        level = log.get('level', 'INFO')
-        message = log.get('message', '')
-        html += f'<div class="mb-1">[{timestamp}] {level}: {message}</div>'
-    if not html:
-        html = '<div class="text-gray-500">No logs available</div>'
+    
+    if logs:
+        for log in logs:  # Show all accumulated logs
+            try:
+                timestamp = datetime.fromtimestamp(log['timestamp']).strftime('%H:%M:%S.%f')[:-3]
+            except (ValueError, TypeError):
+                timestamp = '??:??:??.???'
+            level = log.get('level', 'INFO').upper()
+            message = log.get('message', '')
+            # Escape HTML characters for safety
+            message = message.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            html += f'<div>[{timestamp}] <span class="text-yellow-300">{level}</span>: {message}</div>'
+    else:
+        html = '<div class="text-gray-500">Waiting for logs...</div>'
+    
     return HttpResponse(html)
 
 @csrf_exempt

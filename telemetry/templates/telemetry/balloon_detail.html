@@ -265,10 +265,19 @@
         <!-- Log Console -->
         <div class="bg-black rounded-xl shadow-sm border border-slate-200 p-6 mt-6">
             <h3 class="text-lg font-semibold text-white mb-4">Flight Logs</h3>
-            <div id="log-console" hx-get="{% url 'get_balloon_logs' balloon.balloon_id %}" hx-trigger="load, every 2s" class="bg-black text-green-400 font-mono text-sm p-4 rounded-lg h-64 overflow-y-auto border border-gray-700">
+            <div id="log-console" hx-get="{% url 'get_balloon_logs' balloon.balloon_id %}" hx-trigger="load, every 2s" hx-swap="innerHTML" class="bg-black text-green-400 font-mono text-xs p-4 rounded-lg h-64 overflow-y-auto border border-gray-700 whitespace-pre-wrap break-words leading-relaxed">
                 <!-- Logs will be loaded here -->
             </div>
         </div>
+        
+        <script>
+            document.addEventListener('htmx:afterSwap', function(event) {
+                if (event.detail.target.id === 'log-console') {
+                    // Auto-scroll to bottom after logs are updated
+                    event.detail.target.scrollTop = event.detail.target.scrollHeight;
+                }
+            });
+        </script>
     </div>
 
     <script type="application/json" id="telemetry-data">{{ telemetry_data|safe }}</script>
