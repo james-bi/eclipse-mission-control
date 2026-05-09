@@ -332,6 +332,26 @@ def get_balloon_image(request, balloon_id):
     })
 
 @login_required
+def rotate_balloon_image(request, image_id):
+    from django.shortcuts import get_object_or_404
+    image = get_object_or_404(BalloonImage, id=image_id)
+    
+    direction = request.GET.get('direction', 'clockwise')
+    if direction == 'clockwise':
+        image.rotation = (image.rotation + 90) % 360
+    elif direction == 'counterclockwise':
+        image.rotation = (image.rotation - 90) % 360
+    
+    image.save()
+    
+    # Return the updated carousel
+    balloon = image.balloon
+    return render(request, 'telemetry/partials/image_carousel.html', {
+        'balloon': balloon,
+        'image': image
+    })
+
+@login_required
 def balloon_telemetry_api(request, balloon_id):
     balloon = get_object_or_404(Balloon, balloon_id=balloon_id)
 

@@ -31,6 +31,7 @@ class BalloonImage(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     image_url = models.URLField(max_length=500) # The S3 Link
     filename = models.CharField(max_length=255, blank=True, null=True) # Original filename
+    rotation = models.IntegerField(default=0, choices=[(0, '0°'), (90, '90°'), (180, '180°'), (270, '270°')]) # Rotation in degrees
 
     class Meta:
         ordering = ['-timestamp']
