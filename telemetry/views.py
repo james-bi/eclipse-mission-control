@@ -95,7 +95,7 @@ def receive_image_metadata(request):
     try:
         data = json.loads(request.body)
         balloon_id = data.get('balloon_id')
-        image_url = data.get('url')
+        image_url = data.get('url') or data.get('s3_url') or data.get('photo_url') or data.get('image_url')
 
         if not balloon_id or not image_url:
             return JsonResponse({'error': 'Missing balloon_id or url'}, status=400)
@@ -129,16 +129,12 @@ def receive_photo_notification(request):
         
         # Extract image URL
         image_url = data.get('s3_url') or data.get('url') or data.get('photo_url') or data.get('image_url')
-        if not image_url:
-            return JsonResponse({'error': 'Missing s3_url'}, status=400)
-
+        balloon_id = data.get('balloon_id') or data.get('device_id') or data.get('id')
+        
+        if not balloon_id or not image_url:
+            return JsonResponse({'error': 'Missing balloon_id or url'}, status=400)
+        
         # Extract or derive balloon_id
-        balloon_id = (
-            data.get('balloon_id')
-            or data.get('device_id')
-            or data.get('id')
-            or data.get('flight_name')
-        )
         if not balloon_id:
             # Derive from S3 path if available
             try:

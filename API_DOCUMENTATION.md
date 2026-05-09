@@ -60,6 +60,7 @@ curl -X POST http://your-server.com/api/telemetry/receive/ \
 {
   "balloon_id": "string",  // Required: Unique identifier for the balloon
   "url": "string"          // Required: URL to the image (e.g., S3 bucket URL)
+  // or use "s3_url", "photo_url", or "image_url" for compatibility
 }
 ```
 
@@ -96,7 +97,8 @@ curl -X POST http://your-server.com/api/image/receive/ \
 ```json
 {
   "balloon_id": "string",  // Required: Unique identifier for the balloon
-  "url": "string"          // Required: URL to the photo on S3 (or photo_url/image_url depending on final structure)
+  "url": "string"          // Required: URL to the photo on S3
+  // or use "s3_url", "photo_url", or "image_url" for compatibility
 }
 ```
 
