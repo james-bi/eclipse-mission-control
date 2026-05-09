@@ -28,6 +28,6 @@ urlpatterns = [
     path("api/telemetry/<slug:balloon_id>/", views.balloon_telemetry_api, name="api_balloon_telemetry"),
     path("api/image/receive/", views.receive_image_metadata, name="receive_image_metadata"),
     path("api/photo/notify/", views.receive_photo_notification, name="receive_photo_notification"),
-    path("balloon/<slug:balloon_id>/", views.balloon_detail, name="balloon_detail"),
-    path("", include("telemetry.urls")),
+    path("api/logs/receive/", views.receive_logs, name="receive_logs"),
+    path("api/logs/<slug:balloon_id>/", views.get_balloon_logs, name="get_balloon_logs"),
 ]

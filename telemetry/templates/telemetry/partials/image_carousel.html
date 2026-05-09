@@ -1,5 +1,8 @@
 <div id="image-carousel-container" class="relative group w-full mx-auto">
   {% if image %}
+    <div class="text-center mb-2">
+      <p class="text-sm font-medium text-slate-700">{{ image.filename|default:image.image_url|split:"/"|last }}</p>
+    </div>
     <img src="{{ image.image_url }}" alt="Balloon Image" class="w-full h-auto rounded-lg shadow-md object-cover aspect-video">
     
     <div class="absolute inset-0 flex items-center justify-between px-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">

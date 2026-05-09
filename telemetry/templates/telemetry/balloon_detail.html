@@ -249,6 +249,7 @@
                 {% if balloon.images.exists %}
                     {% with image=balloon.images.first %}
                     <div class="text-center">
+                        <p class="text-sm font-medium text-slate-700 mb-2">{{ image.filename|default:image.image_url|split:"/"|last }}</p>
                         <img src="{{ image.image_url }}" alt="Balloon Image" class="max-w-full max-h-96 mx-auto rounded-lg shadow-sm">
                         <p class="text-sm text-slate-500 mt-2">{{ image.timestamp|date:"M j, Y g:i A" }}</p>
                     </div>
@@ -258,6 +259,14 @@
                         <p>No images available yet</p>
                     </div>
                 {% endif %}
+            </div>
+        </div>
+
+        <!-- Log Console -->
+        <div class="bg-black rounded-xl shadow-sm border border-slate-200 p-6 mt-6">
+            <h3 class="text-lg font-semibold text-white mb-4">Flight Logs</h3>
+            <div id="log-console" hx-get="{% url 'get_balloon_logs' balloon.balloon_id %}" hx-trigger="load, every 2s" class="bg-black text-green-400 font-mono text-sm p-4 rounded-lg h-64 overflow-y-auto border border-gray-700">
+                <!-- Logs will be loaded here -->
             </div>
         </div>
     </div>

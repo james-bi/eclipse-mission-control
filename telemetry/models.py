@@ -30,6 +30,7 @@ class BalloonImage(models.Model):
     balloon = models.ForeignKey(Balloon, on_delete=models.CASCADE, related_name='images')
     timestamp = models.DateTimeField(auto_now_add=True)
     image_url = models.URLField(max_length=500) # The S3 Link
+    filename = models.CharField(max_length=255, blank=True, null=True) # Original filename
 
     class Meta:
         ordering = ['-timestamp']

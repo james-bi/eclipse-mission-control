@@ -126,7 +126,62 @@ curl -X POST http://your-server.com/api/photo/notify/ \
   }'
 ```
 
-### 4. Get Balloon Detail Dashboard
+### 4. Receive Flight Logs
+**Endpoint:** `POST /api/logs/receive/`  
+**Content-Type:** `application/json`  
+**CSRF Exempt:** Yes
+
+#### Request Body
+```json
+{
+  "balloon_id": "string",  // Required: Unique identifier for the balloon
+  "logs": [                // Array of log entries
+    {
+      "timestamp": number, // Unix timestamp
+      "level": "string",   // Log level (INFO, ERROR, etc.)
+      "message": "string", // Log message
+      "module": "string",  // Optional: Module name
+      "function": "string", // Optional: Function name
+      "line": number       // Optional: Line number
+    }
+  ],
+  "timestamp": number      // Overall timestamp
+}
+```
+
+#### Response
+**Success (201):**
+```json
+{
+  "message": "Logs received successfully"
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Missing balloon_id
+- `500 Internal Server Error`: Server error
+
+#### Example Request
+```bash
+curl -X POST http://your-server.com/api/logs/receive/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "balloon_id": "scout-1",
+    "logs": [
+      {
+        "timestamp": 1715251491.326,
+        "level": "INFO",
+        "message": "Photo captured with libcamera-still",
+        "module": "flight_loop",
+        "function": "capture_with_libcamera",
+        "line": 821
+      }
+    ],
+    "timestamp": 1715251491.326
+  }'
+```
+
+### 5. Get Balloon Detail Dashboard
 **Endpoint:** `GET /balloon/<balloon_id>/`  
 **Response:** Full HTML page with interactive balloon dashboard
 
@@ -135,6 +190,7 @@ curl -X POST http://your-server.com/api/photo/notify/ \
 - Interactive Google Maps with flight path visualization
 - Altitude and temperature charts over time
 - Onboard camera image carousel
+- Real-time scrolling flight logs console
 - Responsive design for all devices
 
 #### Example

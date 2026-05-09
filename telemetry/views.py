@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils.text import slugify
@@ -8,10 +8,14 @@ from django.conf import settings
 import json
 import logging
 import boto3
+from datetime import datetime
 from botocore.exceptions import NoCredentialsError
 from .models import Balloon, BalloonImage, TelemetryData
 
 logger = logging.getLogger(__name__)
+
+# Global storage for logs (no database)
+logs_by_balloon = {}
 
 def sanitize_balloon_id(balloon_id):
     """
@@ -105,7 +109,9 @@ def receive_image_metadata(request):
             defaults={'name': balloon_id, 'status': 'active'}
         )
 
-        image = BalloonImage.objects.create(balloon=balloon, image_url=image_url)
+        filename = data.get('filename') or image_url.split('/')[-1] if image_url else None
+
+        image = BalloonImage.objects.create(balloon=balloon, image_url=image_url, filename=filename)
         
         return JsonResponse({
             'message': 'Image metadata saved successfully',
@@ -156,7 +162,9 @@ def receive_photo_notification(request):
             defaults={'name': balloon_id, 'status': 'active'}
         )
 
-        image = BalloonImage.objects.create(balloon=balloon, image_url=image_url)
+        filename = data.get('filename') or image_url.split('/')[-1] if image_url else None
+
+        image = BalloonImage.objects.create(balloon=balloon, image_url=image_url, filename=filename)
         
         return JsonResponse({
             'message': 'Photo notification received and saved successfully',
@@ -165,6 +173,35 @@ def receive_photo_notification(request):
     except Exception as e:
         logger.exception('Failed to process photo notification')
         return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_POST
+def receive_logs(request):
+    try:
+        data = json.loads(request.body)
+        balloon_id = data.get('balloon_id')
+        if not balloon_id:
+            return JsonResponse({'error': 'Missing balloon_id'}, status=400)
+        
+        logs = data.get('logs', [])
+        logs_by_balloon[balloon_id] = logs
+        
+        return JsonResponse({'message': 'Logs received successfully'}, status=201)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def get_balloon_logs(request, balloon_id):
+    logs = logs_by_balloon.get(balloon_id, [])
+    html = ''
+    for log in logs[-50:]:  # Show last 50 logs
+        timestamp = datetime.fromtimestamp(log['timestamp']).strftime('%H:%M:%S')
+        level = log.get('level', 'INFO')
+        message = log.get('message', '')
+        html += f'<div class="mb-1">[{timestamp}] {level}: {message}</div>'
+    if not html:
+        html = '<div class="text-gray-500">No logs available</div>'
+    return HttpResponse(html)
 
 @csrf_exempt
 @require_POST
@@ -354,6 +391,7 @@ def balloon_detail(request, balloon_id):
         'telemetry_data': json.dumps(telemetry_data),
         'ascent_rate': round(ascent_rate, 2),
         'google_maps_api_key': 'AIzaSyCKkt3WQ48-xNJPOhruaIaxV6-GB35XEgE',  # Replace with actual key
+        'logs': logs_by_balloon.get(balloon_id, []),
     }
     
     return render(request, 'telemetry/balloon_detail.html', context)
