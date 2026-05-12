@@ -307,6 +307,7 @@ def get_balloon_image(request, balloon_id):
     
     current_id = request.GET.get('current_id', request.GET.get('current_image_id'))
     direction = request.GET.get('dir', request.GET.get('action'))
+    manual_override = request.GET.get('manual_override') == 'true'
     
     image = None
     if current_id:
@@ -332,7 +333,8 @@ def get_balloon_image(request, balloon_id):
 
     return render(request, 'telemetry/partials/image_carousel.html', {
         'balloon': balloon,
-        'image': image
+        'image': image,
+        'manual_override': manual_override
     })
 
 @login_required
