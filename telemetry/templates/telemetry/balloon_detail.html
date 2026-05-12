@@ -245,20 +245,18 @@
         <!-- Image Carousel -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h3 class="text-lg font-semibold text-slate-800 mb-4">Onboard Camera</h3>
-            <div id="image-carousel" hx-get="{% url 'get_balloon_image' balloon.balloon_id %}" hx-trigger="load, every 5s">
-                {% if balloon.images.exists %}
-                    {% with image=balloon.images.first %}
-                    <div class="text-center">
-                        <p class="text-sm font-medium text-slate-700 mb-2">{{ image.filename|default:"Image" }}</p>
-                        <img src="{{ image.image_url }}" alt="Balloon Image" class="max-w-full max-h-96 mx-auto rounded-lg shadow-sm">
-                        <p class="text-sm text-slate-500 mt-2">{{ image.timestamp|date:"M j, Y g:i A" }}</p>
-                    </div>
-                    {% endwith %}
-                {% else %}
-                    <div class="text-center text-slate-400 py-12">
-                        <p>No images available yet</p>
-                    </div>
-                {% endif %}
+            <div id="image-carousel">
+                <div id="image-carousel-container" class="relative group w-full mx-auto" hx-get="{% url 'get_balloon_image' balloon.balloon_id %}" hx-trigger="load" hx-swap="outerHTML">
+                    {% if balloon.images.exists %}
+                        <div class="text-center text-slate-400 py-12">
+                            <p>Loading camera feed...</p>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-slate-400 py-12">
+                            <p>No images available yet</p>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
 
